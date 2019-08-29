@@ -1,0 +1,251 @@
+import pandas as pd
+import numpy as np
+import re
+import nltk
+from konlpy.tag import Twitter
+import itertools
+from collections import Counter
+import pickle
+import konlpy
+
+import nltk
+
+from sklearn.datasets import make_classification
+from sklearn.decomposition import PCA
+from imblearn.over_sampling import SMOTE
+
+sm = SMOTE(ratio='auto', kind='regular')
+
+
+
+petition=pd.read_csv('petiton_df_75530.csv',dtype = str)
+del petition['Unnamed: 0']
+
+
+agree_list = []
+for i in range(len(petition)):
+    agree = petition['1'][i]
+    sen = re.sub(',','',str(agree))
+    agree_list.append(sen)
+
+
+petition['1'] = agree_list
+petition['1']  = petition['1'].astype(int)
+petition = petition.drop([4753,8130,21136,23246,23756,25636,29473,36231,37007,37429,52460,65049,72403,72409,72635],0)
+
+petition=petition.reset_index(drop=True)
+petition=petition.rename(columns={'0':'petition','1':'agree'})
+
+agree_class=pd.read_csv('./class.csv',dtype = str)
+agree_class
+
+petition['agree_class'] = agree_class['agree_class']
+
+petition['agree_class'].value_counts()
+
+
+petition0 = petition[petition['agree_class'] == '0']
+petition0=petition0.reset_index(drop=True)
+
+petition5 = petition[petition['agree_class'] == '1']
+petition5=petition5.reset_index(drop=True)
+
+seed = 0
+
+import random
+import numpy as np
+from tensorflow import set_random_seed
+
+from keras.utils import to_categorical
+
+random.seed(seed)
+np.random.seed(seed)
+set_random_seed(seed)
+
+
+from sklearn.model_selection  import train_test_split
+train, petition00 = train_test_split(petition0, test_size=0.2, random_state=seed)
+
+train=train.reset_index(drop=True)
+petition00=petition00.reset_index(drop=True)
+
+petition = pd.concat([petition00,petition5],ignore_index=True)
+
+
+def preprocessing(sen):
+    sen=re.sub("ht+ps\W*\S*", '★',sen)
+    sen = re.sub('[0-9]+','□',sen)
+    sen = re.sub('[^가-힣★□]',' ',sen)
+    sen = re.sub('[\s]+',' ',sen)
+    sen = re.sub('★','URL',sen)
+    sen = re.sub('□','NUM',sen)
+    sen = re.sub('\\r','',sen)
+    sen = re.sub('\\n','',sen)
+    return sen
+
+
+pre_petition=[]
+for i in range(len(petition)):
+    sen = petition['petition'][i]
+    sen = preprocessing(sen)
+    pre_petition.append(sen)
+
+
+from konlpy.tag import Twitter
+t = Twitter()
+
+pos_petition = []
+for i in range(len(pre_petition)):
+    pos_petition.append(t.pos(pre_petition[i]))
+
+
+petition['parser'] = pos_petition
+
+
+text=list(itertools.chain(*pos_petition))
+
+
+sorted_words = sorted([(k,v) for k,v in words_count.items()], key=lambda word_count: -word_count[1])
+sorted_words
+
+
+a = ['[PAD]','[UNK]']
+
+
+sort_vocab = []
+for i in range(len(sorted_words)):
+    if sorted_words[i][1] > 9:
+        sort_vocab.append(sorted_words[i][0])
+
+
+sort_vocab = a + sort_vocab
+voca = {x: i for i, x in enumerate(sort_vocab)}
+
+voc=[]
+for sentence in petition['parser']:
+    vo=[]
+    for word in sentence:
+        if word in voca:
+            vo.append(voca[word])
+        else:
+            word = '[UNK]'
+            vo.append(voca[word])
+            
+    voc.append(vo)
+
+
+
+sequence_length = 17344
+
+padded_sentences = []
+for i in range(len(petition)):
+        sentence = voc[i]
+        num_padding = sequence_length - len(sentence)
+        new_sentence = sentence + [0] * num_padding
+        padded_sentences.append(new_sentence)
+
+
+petition['padding'] = padded_sentences
+
+X = []
+for i in range(len(petition)):
+    X.append(petition['padding'][i])
+X = np.array(X)
+X
+
+y_train = petition['agree_class']
+
+X_resampled, y_resampled = sm.fit_sample(X,list(y_train))
+
+
+print('After OverSampling, the shape of train_X: {}'.format(X_resampled.shape))
+print('After OverSampling, the shape of train_y: {} \n'.format(X_resampled.shape))
+
+print("After OverSampling, counts of label '1': {}".format(sum(y_resampled=='1')))
+print("After OverSampling, counts of label '0': {}".format(sum(y_resampled=='0')))
+
+
+X = pd.DataFrame(X_resampled)
+
+y = pd.DataFrame(y_resampled)
+
+
+from sklearn.model_selection  import train_test_split
+X_train, X_test = train_test_split(X, test_size=0.2, random_state=seed)
+
+X_train=X_train.reset_index(drop=True)
+X_test=X_test.reset_index(drop=True)
+
+
+from sklearn.model_selection  import train_test_split
+y_train, y_test = train_test_split(y, test_size=0.2, random_state=seed)
+
+y_train=y_train.reset_index(drop=True)
+y_test=y_test.reset_index(drop=True)
+
+
+seed = 0
+
+import random
+import numpy as np
+from tensorflow import set_random_seed
+
+from keras.utils import to_categorical
+
+random.seed(seed)
+np.random.seed(seed)
+set_random_seed(seed)
+
+
+from sklearn.cross_validation  import train_test_split
+train, test = train_test_split(petition, test_size=0.2, random_state=seed)
+
+train=train.reset_index(drop=True)
+test=test.reset_index(drop=True)
+
+
+X = []
+for i in range(len(petition)):
+    X.append(petition['padding'][i])
+X = np.array(X)
+
+
+
+
+from sklearn.preprocessing import MinMaxScaler
+
+scaler = MinMaxScaler(feature_range=(0, 1))
+scaler.fit_transform(X)
+X = scaler.fit_transform(X)
+
+
+from sklearn.datasets import make_classification
+from sklearn.decomposition import PCA
+from imblearn.over_sampling import SMOTE
+
+
+Y = petition['agree_class'].values
+Y = np.array(Y)
+
+test_X = []
+for i in range(len(test)):
+    test_X.append(test['padding'][i])
+test_X = np.array(test_X)
+
+
+test_Y = test['agree_class']
+test_Y = np.array(test_Y)
+test_Y
+
+from sklearn.svm import SVC, LinearSVC
+from sklearn.metrics import accuracy_score
+
+lin_clf = LinearSVC()
+lin_clf.fit(X_train, y_train) 
+
+pred_Y = lin_clf.predict(X_test)
+
+accuracy_score(y_test,pred_Y)
+
+
+
