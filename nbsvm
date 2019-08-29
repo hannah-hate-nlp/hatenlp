@@ -1,0 +1,195 @@
+import easydict
+
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--gram", type=int, default=1)
+    parser.add_argument("--C", type=float, default=1)
+    parser.add_argument("--beta", type=float, default=.25)
+    parser.add_argument("--alpha", type=float, default=1)
+
+    return parser.parse_args()
+
+
+args = easydict.EasyDict({
+ 
+        "gram": 1,
+ 
+        "C": 1,
+ 
+        "beta": .25,
+ 
+        "alpha": "1"
+ 
+})
+
+
+#find prior = total positive examples/total examples 
+total_sents = traindata.shape[0]
+pos_sents = traindata.loc[traindata['Sentiment'] == 0].shape[0]
+neg_sents = total_sents - pos_sents
+print(total_sents)
+print(pos_sents)
+print(neg_sents) 
+
+ #initiate counts for word appearance conditional on label == 1 and label == 2
+    #alpha is laplacian smoothing parameter
+pos_list = np.ones(len(vocab)) * 1
+neg_list = np.ones(len(vocab)) * 1
+
+
+def rm_stopwords(word_list):
+    return [word for word in word_list if word not in stopwords.words('english')]
+
+def tokenize(sent, grams):
+    words_list = rm_stopwords(sent.split())
+    sent_tok = []
+    for gram in range(1, grams + 1):
+        for i in range(len(words_list) + 1 - gram):
+            sent_tok.append("-".join(words_list[i:i + gram]))
+    return sent_tok
+
+
+def create_bow(sentence, vocab, gram):
+    word_list = tokenize(sentence, gram)
+    bow = np.zeros(len(vocab))
+    
+    for word in word_list:
+            bow[vocab[word]] = 1
+    return bow
+
+
+ #Calculate log-count ratio
+x = (pos_list/abs(pos_list).sum())
+y = (neg_list/abs(neg_list).sum())
+r = np.log(x/y)
+b = np.log(pos_sents/neg_sents)
+    
+
+
+def train_nb(vocab_list, df):
+    
+    #find prior = total positive examples/total examples 
+    total_sents = traindata.shape[0]
+    pos_sents = traindata.loc[traindata['Sentiment'] == 1].shape[0]
+    neg_sents = total_sents - pos_sents
+    
+    #initiate counts for word appearance conditional on label == 1 and label == 2
+    #alpha is laplacian smoothing parameter
+    pos_list = np.ones(len(vocab_list)) * 1
+    neg_list = np.ones(len(vocab_list)) * 1
+    
+    for sentence, label in zip(traindata['Phrase'].values, traindata['Sentiment']):
+        bow = create_bow(sentence, vocab_list, args.gram)
+      
+        if label == 1:
+            pos_list +=bow
+        else:
+            neg_list +=bow
+            
+    #Calculate log-count ratio
+    x = (pos_list/abs(pos_list).sum())
+    y = (neg_list/abs(neg_list).sum())
+    r = np.log(x/y)
+    b = np.log(pos_sents/neg_sents)
+    
+    return r, b
+
+
+
+def train_svm(vocab_list, df_train, c, r):
+    clf = LinearSVC(C=c, class_weight=None, dual=False, fit_intercept=True,
+     loss='squared_hinge', max_iter=1000,
+     multi_class='ovr', penalty='l2', random_state=0, tol=0.0001,
+     verbose=0)
+    
+    X = np.array([(r * create_bow(sentence, vocab_list, args.gram))  for sentence in train['Phrase'].values])
+    y = train['Sentiment'].values
+   
+    clf.fit(X, y)   
+    svm_coef = clf.coef_
+    svm_intercept = clf.intercept_
+    
+    return svm_coef, svm_intercept, clf
+
+
+train_svm(vocab,train,args.C, r)
+
+
+"""
+Predict classification with MNB
+"""
+def predict(df_test, w, b, vocab_list):
+    total_sents = df_test.shape[0]
+    total_score = 0
+    
+    for sentence, label in zip(test['Phrase'].values, test['Sentiment']):      
+        bow = create_bow(sentence, vocab_list, args.gram)
+
+        result = np.sign(np.dot(bow, w.T) + b)
+        if result == label:
+            total_score +=1      
+            
+    return total_score/total_sents
+
+
+
+
+predict(test, r, b, vocab)
+
+
+
+"""
+Predict classification with NB-SVM
+"""
+def predict_nbsvm(df_test, svm_coef, svm_intercept, r, b, vocab_list):
+    total_sents = test.shape[0]
+    total_score = 0
+    
+    for sentence, label in zip(test['Phrase'].values, test['Sentiment']):
+        bow = r * create_bow(sentence, vocab_list, args.gram)  
+        w_bar = (abs(svm_coef).sum())/len(vocab_list)
+        w_prime = (1 - args.beta)*(w_bar) + (args.beta * svm_coef)
+        result = np.sign(np.dot(bow, w_prime.T) + svm_intercept)
+        if result == label:
+            total_score +=1  
+            
+    return total_score/total_sents
+
+
+
+
+    
+    print("Training Multinomial Naive Bayes...")
+    r, b = train_nb(vocab, train)
+
+    #Train SVM
+    print("Training LinearSVM...")
+    svm_coef, svm_intercept, clf = train_svm(vocab,train, args.C, r)
+    
+    #Test Models
+    accuracy = predict_nbsvm(test, svm_coef, svm_intercept, r, b, vocab)
+    print("Test using NBSVM ({:.4f}-gram):".format(args.gram))
+    print("Beta: {} Accuracy: {}".format(args.beta, accuracy))
+    
+    mnb_acc = predict(test, r, b, vocab)
+    print("Test using MNB ({:.4f}-gram):".format(args.gram))
+    print("Accuracy: {}".format(mnb_acc))
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
