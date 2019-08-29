@@ -1,0 +1,270 @@
+import pandas as pd
+import random
+import numpy as np
+from tensorflow import set_random_seed
+import pandas as pd
+import re
+import pickle
+import itertools
+from collections import Counter
+
+from sklearn.model_selection import train_test_split
+
+
+seed = 0
+
+import random
+import numpy as np
+from tensorflow import set_random_seed
+
+random.seed(seed)
+np.random.seed(seed)
+set_random_seed(seed)
+
+from wordcloud import WordCloud, STOPWORDS
+stopwords = set(STOPWORDS)
+stopwords.remove("not")
+
+
+
+def preprocessing(sen):
+#     sen = re.sub("RT ", ' ',sen)
+    sen = sen.lower()
+    sen = re.sub("ht+p\W*\S*", ' urlu ',sen)
+    sen = re.sub("\d+", ' numu ',sen)
+    sen = re.sub("@\w+", ' nameu ',sen)
+    sen = re.sub("#\w*\S*", '',sen)
+    sen = re.sub("\t", ' ',sen)
+    sen = re.sub("can't", 'can not',sen)
+    sen = re.sub("n't", ' not',sen)
+    sen = re.sub("'m", ' am',sen)
+    sen = re.sub("'s", ' is',sen)
+    sen = re.sub("'re", ' are',sen)
+    sen = re.sub("'ve", ' have',sen)
+    sen = re.sub("'d", ' would',sen)
+    sen = re.sub("[^a-z\s]+", ' speu ',sen)
+    sen = re.sub("\s\s+", ' ',sen)
+    sen = re.sub("urlu", '[URL]',sen)
+    sen = re.sub("numu", '[NUM]',sen)
+    sen = re.sub("nameu", '[NAME]',sen)
+    sen = re.sub("speu", '[SPE]',sen)
+
+    return sen
+    
+    
+def remove_stopwords(words):    
+    ret = []
+    for word in words:
+        if word not in stopwords:
+            ret.append(word)
+        
+    return  ret
+    
+    
+traindata = pd.read_csv("./customer_reviews.csv")
+    
+traindata['score'].value_counts()
+
+
+
+from sklearn.model_selection import train_test_split
+trainpn, testpn = train_test_split(traindata, test_size=0.25, random_state=seed)
+trainpn, valpn = train_test_split(trainpn, test_size=0.25, random_state=seed)
+
+train=trainpn.reset_index(drop=True)
+test=testpn.reset_index(drop=True)
+val=valpn.reset_index(drop=True)
+
+
+
+word_count = []
+count=0
+for i in range(len(traindata)): 
+    count=0
+    count += len(traindata['reviews.text'][i].split(" "))
+    word_count.append(count)
+np.max(word_count)
+
+
+
+sequence_length = 227
+
+
+
+import pickle
+
+file=open("./voca_cr","rb")
+
+vocabulary=pickle.load(file)
+
+
+
+
+x_train = [s.split(" ") for s in train['reviews.text']]
+x_test = [s.split(" ") for s in test['reviews.text']]
+x_val = [s.split(" ") for s in val['reviews.text']]
+
+
+padded_sentences_tr = []
+for i in range(len(x_train)):
+        sentence = x_train[i]
+        num_padding = sequence_length - len(sentence)
+        new_sentence = sentence + ["<PAD/>"] * num_padding
+        padded_sentences_tr.append(new_sentence)
+        
+padded_sentences_te = []
+for i in range(len(x_test)):
+        sentence = x_test[i]
+        num_padding = sequence_length - len(sentence)
+        new_sentence = sentence + ["<PAD/>"] * num_padding
+        padded_sentences_te.append(new_sentence)
+        
+padded_sentences_v = []
+for i in range(len(x_val)):
+        sentence = x_val[i]
+        num_padding = sequence_length - len(sentence)
+        new_sentence = sentence + ["<PAD/>"] * num_padding
+        padded_sentences_v.append(new_sentence)
+
+
+
+voc_tr=[]
+for sentence in padded_sentences_tr:
+    vo=[]
+    for word in sentence:
+        if word in vocabulary:
+            vo.append(vocabulary[word])
+        else:
+            word = '[UNK]'
+            vo.append(vocabulary[word])
+            
+    voc_tr.append(vo)
+
+voc_te=[]
+for sentence in padded_sentences_te:
+    vo=[]
+    for word in sentence:
+        if word in vocabulary:
+            vo.append(vocabulary[word])
+        else:
+            word = '[UNK]'
+            vo.append(vocabulary[word])
+            
+    voc_te.append(vo)
+
+voc_v=[]
+for sentence in padded_sentences_v:
+    vo=[]
+    for word in sentence:
+        if word in vocabulary:
+            vo.append(vocabulary[word])
+        else:
+            word = '[UNK]'
+            vo.append(vocabulary[word])
+            
+    voc_v.append(vo)
+
+
+X=np.array(pd.DataFrame(voc_tr))
+Y = to_categorical(train['score'].values)
+test_X=np.array(pd.DataFrame(voc_te))
+test_Y=to_categorical(test['score'].values)
+val_X=np.array(pd.DataFrame(voc_v))
+val_Y=to_categorical(val['score'].values)
+
+
+from keras.layers import Input, Dense, Embedding, Flatten
+from keras.layers import SpatialDropout1D
+from keras.layers.convolutional import Conv1D, MaxPooling1D
+from keras.models import Sequential
+
+from keras.layers import Dense,Dropout,Embedding,LSTM,Conv1D,GlobalMaxPooling1D,Flatten,MaxPooling1D,GRU,SpatialDropout1D,Bidirectional
+from keras.optimizers import Adam
+from keras.layers.normalization import BatchNormalization
+from keras import regularizers
+
+
+max_features = 1417
+maxlen = 227
+epochs = 5
+batch_size =32
+
+model1_1 = Sequential()
+model1_1.add(Embedding(max_features, 50, input_length=maxlen))
+model1_1.add(Conv1D(16, kernel_size=3, padding='same', activation='relu'))
+model1_1.add(BatchNormalization())
+model1_1.add(Conv1D(8, kernel_size=3, padding='same', activation='relu'))
+model1_1.add(MaxPooling1D(pool_size=2))
+model1_1.add(Flatten())
+model1_1.add(Dense(3, activation='relu',kernel_regularizer=regularizers.l2(0.01)))
+# model1_1.add(Dropout(0.5))
+model1_1.add(Dense(2, activation='softmax',kernel_regularizer=regularizers.l2(0.01)))
+model1_1.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+model1_1.fit(X, Y, validation_data=(val_X, val_Y),epochs=epochs, batch_size=batch_size, verbose=1)
+
+model1_1.evaluate(test_X, test_Y, verbose=1,batch_size=32)
+
+
+pred_y = model1_1.predict_classes(test_X)
+
+pred_y_df = pd.DataFrame(pred_y)
+
+for i in range(len(pred_y_df)):
+    if pred_y_df[0][i] == 0:
+        pred_y_df[0][i] = 2
+
+p = np.array(pred_y_df[0])
+
+test_y = np.array(test['score'])
+
+test_y_df = pd.DataFrame(test_y)
+
+
+for i in range(len(pred_y_df)):
+    if test_y_df[0][i] == 0:
+        test_y_df[0][i] = 2
+
+y = np.array(test_y_df[0])
+
+
+accuracy = np.mean(np.equal(y,p))
+
+TP = np.sum(y * p == 1)
+TN = np.sum(y * p == 4)
+
+precision_1 = TP / np.sum(p == 1)
+precision_2 = TN / np.sum(p == 2)
+
+recall_1 = TP / np.sum(y == 1)
+recall_2= TN / np.sum(y == 2)
+
+f1_1 = 2 * precision_1*recall_1/(precision_1+recall_1)
+f1_2 = 2 * precision_2*recall_2/(precision_2+recall_2)
+
+
+
+print('acc =',accuracy)
+print('prec_1 =',precision_1)
+print('prec_2 =',precision_2)
+print('recall_1 =',recall_1)
+print('recall_2 =',recall_2)
+print('f1_1 =',f1_1)
+print('f1_2 =',f1_2)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
