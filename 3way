@@ -228,3 +228,151 @@ print('recall_1 =',recall_1)
 print('recall_2 =',recall_2)
 print('f1_1 =',f1_1)
 print('f1_2 =',f1_2)
+
+
+
+
+##3classes
+
+
+absol = []
+for i in range(len(p)):
+    absolute=np.abs(max(p[i]) - min(p[i]))
+    absol.append((absolute,i))
+
+absol.sort()
+
+absolute=absol[0:686]
+
+
+
+test = pd.read_csv('3test.csv')
+del test['Unnamed: 0']
+
+enhance = []
+for i in range(len(absolute)):
+    j=absolute[i][1]
+    enhance.append(test.loc[j])
+
+
+
+boundary = pd.DataFrame(enhance)
+
+
+
+for j in range(len(absolute)):
+    h = absolute[j][1]
+    test = test.drop(h,0)
+
+
+
+testdata=test.reset_index(drop=True)
+
+
+
+boundary['Sentiment'].value_counts()
+
+
+
+
+threewaydata = pd.concat([testdata,boundary])
+
+
+threewaydata=threewaydata.reset_index(drop=True)
+threewaydata
+
+
+sequence_length = 290
+
+boundarydata = [s.split(" ") for s in boundary['Phrase']]
+
+padded_sentences = []
+for i in range(len(boundarydata)):
+        sentence = boundarydata[i]
+        num_padding = sequence_length - len(sentence)
+        new_sentence = sentence + ["<PAD/>"] * num_padding
+        padded_sentences.append(new_sentence)
+
+file=open("./voca","rb")
+
+voca=pickle.load(file)
+
+
+
+voc=[]
+for sentence in padded_sentences:
+    vo=[]
+    for word in sentence:
+        if word in voca:
+            vo.append(voca[word])
+        else:
+            word = '[UNK]'
+            vo.append(voca[word])
+            
+    voc.append(vo)
+
+
+
+s = []
+for i in range(len(predi)):
+    if max(predi[i]) == predi[i][0]:
+        s.append(0)
+    
+    elif max(predi[i]) == predi[i][1]:
+        s.append(1)
+        
+    else: s.append(2)
+
+predict = np.array(s)
+predict = predict.astype('int')
+dfp=list(predict)
+dfb=list(bound_p)
+sum_pred=dfp+dfb
+sum_p = np.array(sum_pred)
+
+sum_y = np.array(threewaydata['Sentiment'])
+
+s = []
+for i in range(len(p)):
+    if max(p[i]) == p[i][0]:
+        s.append(0)
+    
+    elif max(p[i]) == p[i][1]:
+        s.append(1)
+        
+    else: s.append(2)
+    
+    
+pred_b = np.array(s)
+
+for i in range(len(p)):
+    abs(p[i][0]-p[i][1])
+
+absol = []
+for i in range(len(p)):
+    absolute=np.abs(p[i][0] - p[i][1])
+    absol.append((absolute,i))
+
+absol.sort()
+absolute=absol[0:538]
+absolute
+
+
+enhance = []
+for i in range(len(absolute)):
+    j=absolute[i][1]
+    enhance.append(testpn.loc[j])
+
+test=pd.DataFrame(enhance).reset_index(drop=True)
+
+
+testpn = pd.read_csv('./3testtt.csv',header = None)
+# testpn = testpn[['Phrase','Sentiment']]
+del testpn[0]
+testpn
+
+
+
+
+
+
