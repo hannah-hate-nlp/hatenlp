@@ -1,0 +1,46 @@
+from keras.layers import Input, Dense, Embedding, Flatten
+from keras.layers import SpatialDropout1D
+from keras.layers.convolutional import Conv1D, MaxPooling1D
+from keras.models import Sequential
+
+from keras.layers import Dense,Dropout,Embedding,LSTM,Conv1D,GlobalMaxPooling1D,Flatten,MaxPooling1D,GRU,SpatialDropout1D,Bidirectional
+from keras.optimizers import Adam
+from keras.layers.normalization import BatchNormalization
+from keras import regularizers
+
+
+
+max_features = 10688
+maxlen = 73
+
+
+epochs = 5
+batch_size =32
+
+
+
+model1_1 = Sequential()
+model1_1.add(Embedding(max_features, 10, input_length=maxlen))
+model1_1.add(Conv1D(16, kernel_size=3, padding='same', activation='relu'))
+model1_1.add(BatchNormalization())
+model1_1.add(Conv1D(8, kernel_size=3, padding='same', activation='relu'))
+model1_1.add(MaxPooling1D(pool_size=2))
+model1_1.add(Flatten())
+model1_1.add(Dense(3, activation='relu',kernel_regularizer=regularizers.l2(0.001)))
+model1_1.add(Dropout(0.5))
+model1_1.add(Dense(2, activation='softmax',kernel_regularizer=regularizers.l2(0.001)))
+model1_1.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+model1_1.fit(X, Y,epochs=epochs, batch_size=batch_size, verbose=1)
+
+test_X = np.load('./tweet_X.npy')
+test_X
+
+pred_y = model1_1.predict_classes(test_X)
+
+np.save('./pred_Y',pred_y)
+
+
+
+
+
