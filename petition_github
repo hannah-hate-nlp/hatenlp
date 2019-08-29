@@ -1,0 +1,284 @@
+import pandas as pd
+import numpy as np
+import re
+import nltk
+from konlpy.tag import Twitter
+import itertools
+from collections import Counter
+import pickle
+import konlpy
+from konlpy.tag import Twitter
+
+
+petition=pd.read_csv('petiton_df_75530.csv',dtype = str)
+del petition['Unnamed: 0']
+
+
+
+agree_list = []
+for i in range(len(petition)):
+    agree = petition['1'][i]
+    sen = re.sub(',','',str(agree))
+    agree_list.append(sen)
+
+
+petition['1'] = agree_list
+petition['1']  = petition['1'].astype(int)
+petition = petition.drop([4753,8130,21136,23246,23756,25636,29473,36231,37007,37429,52460,65049,72403,72409,72635],0)
+petition=petition.reset_index(drop=True)
+df=petition.rename(columns={'0':'petition','1':'agree'})
+# agree_class=pd.read_csv('./class.csv',dtype = str)
+# agree_class
+
+df.shape
+
+
+df.describe()
+
+
+petition_remove_outlier = df.loc[(df['agree'] > 0) & (df['agree'] < 200000)]
+petition_remove_outlier.shape
+df = petition_remove_outlier.copy()
+df.describe()
+
+
+
+df.loc[df['agree'] == 1].shape
+
+
+%matplotlib inline 
+df['agree'].plot.hist()
+
+df['votes_pos_neg'] = 0
+
+# votes_mean = df['agree'].median()
+votes_mean = 10
+votes_mean
+
+df['votes_pos_neg'] = (df['agree'] > votes_mean) == 1
+
+df['votes_pos_neg'] = df['votes_pos_neg'].astype(int)
+
+
+df=df.reset_index(drop=True)
+
+
+a = len(df[df.votes_pos_neg == 0])
+b = len(df[df.votes_pos_neg == 1])
+
+'{}:{}={}:{}'.format(a,b,round(a/(a+b),2), round(b/(a+b),2))
+
+################
+df_0 = df[df.votes_pos_neg == 0]
+df_1 = df[df.votes_pos_neg == 1]
+df_sample = df_0.sample(frac = 0.002)
+
+df = pd.concat([df_sample,df_1])
+df = df.reset_index(drop=True)
+
+from sklearn.utils import shuffle
+
+df = shuffle(df)
+#################
+
+def preprocessing(sen):
+    sen = re.sub("ht+ps\W*\S*", '★',sen)
+    sen = re.sub('[0-9]+','□',sen)
+    sen = re.sub('[^가-힣★□]',' ',sen)
+    sen = re.sub('[\s]+',' ',sen)
+    sen = re.sub('★',' URL ',sen)
+    sen = re.sub('□',' NUM ',sen)
+    sen = re.sub('[\s]+',' ',sen)
+    sen = re.sub('\\r','',sen)
+    sen = re.sub('\\n','',sen)
+    return sen
+
+
+nlpy = Twitter()
+
+def pos_tagging(sen):
+    sen = nlpy.nouns(sen)
+    return ' '.join(sen)
+
+# # 불용어 제거
+# def remove_stopwords(text):
+#     tokens = text.split(' ')
+#     stops = ['안녕', '있습니다', '그', '년도', '안녕하세요', '하는', 
+#              '및', '제', '할', '하고', '더', '대한', '한', '그리고', '월', 
+#              '저는', '없는', '입니다', '등', '일', '많은', '이런', '것은', '왜',
+#              '같은', '같습니다', '없습니다', '위해', '한다']
+#     meaningful_words = [w for w in tokens if not w in stops]
+#     return ' '.join(meaningful_words)
+
+df['content_preprocessing'] = df['petition'].apply(preprocessing)
+df['content_preprocessing2'] = df['content_preprocessing'].apply(pos_tagging)
+# df['content_preprocessing2'] = df['content_preprocessing'].apply(remove_stopwords)
+
+df = df.reindex()
+df.shape
+
+split_count = int(df.shape[0] * 0.7)
+split_count
+
+df_train = df[:split_count].copy()
+df_train.shape
+
+df_train.loc[df_train['votes_pos_neg'] == 1].shape
+
+df_test = df[split_count:].copy()
+df_test.shape
+
+df_test.loc[df_test['votes_pos_neg'] == 1].shape
+
+
+#############
+tr_0 = (df_train.loc[df_train['votes_pos_neg'] == 0].shape)[0]
+tr_1 = (df_train.loc[df_train['votes_pos_neg'] == 1].shape)[0]
+te_0 = (df_test.loc[df_test['votes_pos_neg'] == 0].shape)[0]
+te_1 = (df_test.loc[df_test['votes_pos_neg'] == 1].shape)[0]
+
+print('train = {}:{}, test = {}:{}'.format(tr_0,tr_1,te_0,te_1))
+##############
+
+from sklearn.feature_extraction.text import CountVectorizer
+
+vectorizer = CountVectorizer(analyzer = 'word', # 캐릭터 단위로 벡터화 할 수도 있습니다.
+                             tokenizer = None, # 토크나이저를 따로 지정해 줄 수도 있습니다.
+                             preprocessor = None, # 전처리 도구
+                             stop_words = None, # 불용어 nltk등의 도구를 사용할 수도 있습니다.
+                             min_df = 2, # 토큰이 나타날 최소 문서 개수로 오타나 자주 나오지 않는 특수한 전문용어 제거에 좋다. 
+                             ngram_range=(1, 3), # BOW의 단위를 1~3개로 지정합니다.
+                             max_features = 10000 # 만들 피처의 수, 단어의 수가 된다.
+                            )
+vectorizer
+
+
+train_feature_vector = vectorizer.fit_transform(df_train['content_preprocessing2'])
+train_feature_vector.shape
+
+test_feature_vector = vectorizer.fit_transform(df_test['content_preprocessing2'])
+test_feature_vector.shape
+
+vocab = vectorizer.get_feature_names()
+print(len(vocab))
+vocab[:10]
+
+dist = np.sum(train_feature_vector, axis=0)
+
+pd.DataFrame(dist, columns=vocab)
+
+
+from sklearn.feature_extraction.text import TfidfTransformer
+transformer = TfidfTransformer(smooth_idf=False)
+transformer
+
+train_feature_tfidf = transformer.fit_transform(train_feature_vector)
+train_feature_tfidf.shape
+
+pd.DataFrame(train_feature_vector.toarray())
+
+train_feature_vector.toarray()
+train_feature_tfidf.toarray()
+
+test_feature_tfidf = transformer.fit_transform(test_feature_vector)
+test_feature_tfidf.shape
+
+
+from sklearn.ensemble import RandomForestClassifier
+
+# 랜덤포레스트 분류기를 사용
+forest = RandomForestClassifier(
+    n_estimators = 600, n_jobs = -1, random_state=2018)
+forest
+
+y_label = df_train['votes_pos_neg']
+forest = forest.fit(train_feature_tfidf, y_label)
+
+from sklearn.model_selection import KFold
+from sklearn.model_selection import cross_val_score
+k_fold = KFold(n_splits=5, shuffle=True, random_state=0)
+
+scoring = 'accuracy'
+score = cross_val_score(forest, train_feature_tfidf, y_label, cv=k_fold, n_jobs=-1, scoring=scoring)
+score
+
+y_pred = forest.predict(test_feature_tfidf)
+y_pred[:10]
+
+
+from sklearn.svm import SVC, LinearSVC
+
+# 랜덤포레스트 분류기를 사용
+svm = SVC(gamma='scale')
+svm
+
+y_label = df_train['votes_pos_neg']
+svm = svm.fit(train_feature_tfidf, y_label)
+
+from sklearn.model_selection import KFold
+from sklearn.model_selection import cross_val_score
+k_fold = KFold(n_splits=5, shuffle=True, random_state=0)
+
+scoring = 'accuracy'
+score = cross_val_score(svm, train_feature_tfidf, y_label, cv=k_fold, n_jobs=-1, scoring=scoring)
+score
+
+y_pred = svm.predict(test_feature_tfidf)
+y_pred[:10]
+
+
+from sklearn import tree
+
+# 랜덤포레스트 분류기를 사용
+tree = tree.DecisionTreeClassifier()
+tree
+
+y_label = df_train['votes_pos_neg']
+tree = tree.fit(train_feature_tfidf, y_label)
+
+from sklearn.model_selection import KFold
+from sklearn.model_selection import cross_val_score
+k_fold = KFold(n_splits=10, shuffle=True, random_state=0)
+
+scoring = 'accuracy'
+score = cross_val_score(tree, train_feature_tfidf, y_label, cv=k_fold, n_jobs=-1, scoring=scoring)
+score
+
+y_pred = tree.predict(test_feature_tfidf)
+y_pred[:10]
+
+
+
+
+round(np.mean(score)*100,2)
+
+y_pred.shape
+
+output = pd.DataFrame(data={'votes_pos_neg_pred':y_pred})
+output.head()
+
+
+output['votes_pos_neg_pred'].value_counts()
+
+c = len(output[output.votes_pos_neg_pred == 0])
+d = len(output[output.votes_pos_neg_pred == 1])
+
+'{}:{}={}:{}'.format(c,d,round(c/(c+d),2), round(d/(c+d),2))
+
+df_test['votes_pos_neg_pred'] = y_pred
+
+pred_diff = df_test['pred_diff'].value_counts()
+pred_diff
+
+print('전체 {}건의 데이터 중 {}건 예측'.format(y_pred.shape[0], pred_diff[0]))
+
+
+acc = ( pred_diff[0] / y_pred.shape[0] ) *100 
+print('예측 비율 {}'.format(acc))
+
+
+
+
+
+
+
