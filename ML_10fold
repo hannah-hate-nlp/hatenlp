@@ -1,0 +1,25 @@
+
+from sklearn.metrics import r2_score
+import matplotlib.pyplot as plt
+
+from keras.wrappers.scikit_learn import KerasClassifier 
+from sklearn.model_selection import KFold 
+from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import cross_val_score
+
+
+seed = 7
+# np.random.seed(seed)
+
+
+model = tree.DecisionTreeClassifier()
+
+kfold = StratifiedKFold(n_splits=10) 
+results = cross_val_score(model, X, train_y, cv=kfold)
+
+
+
+
+
+pred_y = model1_1.predict_classes(test_X)
+pred_y
