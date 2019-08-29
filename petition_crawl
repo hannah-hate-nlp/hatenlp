@@ -1,0 +1,141 @@
+from bs4 import BeautifulSoup
+import requests
+from urllib.request import urlopen
+from bs4 import BeautifulSoup
+
+
+url = 'https://www1.president.go.kr/petitions/579578'
+
+webpage = urlopen(url)
+
+
+source = BeautifulSoup(webpage, 'html5lib')
+review = source.find('div', {'class':'View_write'})
+print(review.get_text().strip())
+
+
+source = BeautifulSoup(webpage, 'html5lib')
+like = source.find('span', {'class':'counter'})
+print(like.get_text().strip())
+
+
+base_url = 'https://www1.president.go.kr/petitions/{}'
+
+petiton_list = []
+
+for n in range (566181, 458500, -1) :
+    url = base_url.format(n+1)
+    webpage = urlopen(url)
+    source = BeautifulSoup(webpage, 'html5lib')
+    reviews = source.find_all('div', {'class':'View_write'})
+    
+    for review in reviews :
+        petiton_list.append(review.get_text().strip())
+        print(review.get_text().strip())
+
+
+
+
+
+
+base_url = 'https://www1.president.go.kr/petitions/{}'
+
+like_list = []
+#458500
+for n in range (566181, 458500, -1) :
+    url = base_url.format(n+1)
+    webpage = urlopen(url)
+    source = BeautifulSoup(webpage, 'html5lib')
+    likes = source.find_all('span', {'class':'counter'})
+    
+    for like in likes :
+        petiton_list.append(like.get_text().strip())
+        print(like.get_text().strip())
+
+
+
+
+base_url = 'https://www1.president.go.kr/petitions/{}'
+
+petiton_list = []
+like_list = []
+
+for n in range (566181, 550000, -1) :
+    url = base_url.format(n+1)
+    webpage = urlopen(url)
+    source = BeautifulSoup(webpage, 'html5lib')
+    reviews = source.find_all('div', {'class':'View_write'})
+    likes = source.find_all('span', {'class':'counter'})
+    
+    for review in reviews :
+        petiton_list.append(review.get_text().strip())
+        print(review.get_text().strip())
+        
+    for like in likes :
+        like_list.append(like.get_text().strip())
+        print(like.get_text().strip())
+
+
+
+
+
+
+base_url = 'https://www1.president.go.kr/petitions/{}'
+
+petiton_list = []
+like_list = []
+
+for n in range (566181, 560000, -1) :
+    url = base_url.format(n+1)
+    webpage = urlopen(url)
+    source = BeautifulSoup(webpage, 'html5lib')
+    reviews = source.find_all('div', {'class':'View_write'})
+    likes = source.find_all('span', {'class':'counter'})
+    
+    for review in reviews :
+        for like in likes :
+            petiton_list.append([review.get_text().strip(),like.get_text().strip()])
+            print(like.get_text().strip())
+
+
+
+
+base_url = 'https://www1.president.go.kr/petitions/{}'
+
+like_list = []
+#458500
+for n in range (566181, 550000, -1) :
+    url = base_url.format(n+1)
+    webpage = urlopen(url)
+    source = BeautifulSoup(webpage, 'html5lib')
+    likes = source.find_all('span', {'class':'counter'})
+    
+    for like in likes :
+        like_list.append(like.get_text().strip())
+        print(like.get_text().strip())
+
+
+import numpy as np
+import pandas as pd
+df = pd.DataFrame(petiton_list)
+df.to_csv('petiton_list.csv')
+
+for i in range(len(petiton_list)):
+    np.mean(len(petiton_list[i]))
+
+
+
+word_count = []
+count=0
+for i in range(len(petiton_list)): 
+    count=0
+    count += len(petiton_list[i].split(" "))
+    word_count.append(count)
+np.mean(word_count)
+
+
+
+
+
+
+
