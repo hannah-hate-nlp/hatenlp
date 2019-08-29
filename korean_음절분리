@@ -1,0 +1,137 @@
+import pandas as pd
+import random
+import numpy as np
+from tensorflow import set_random_seed
+import pandas as pd
+import re
+import itertools
+from collections import Counter
+
+from sklearn.model_selection import train_test_split
+
+
+
+seed = 0
+
+import random
+import numpy as np
+from tensorflow import set_random_seed
+
+random.seed(seed)
+np.random.seed(seed)
+set_random_seed(seed)
+
+
+job1 = pd.read_csv("./jobs1.txt",sep = "\t",dtype = str)
+
+
+
+job1.a_ind_cd.value_counts().sort_values()
+
+for i in range(len(job1)):
+    if job1['a_ind_cd'][i] == '485':
+        job1['a_ind_cd'][i] = '4785'
+
+for i in range(len(job1)):
+    if job1['a_ind_cd'][i] == '742':
+        job1['a_ind_cd'][i] = '4742'
+
+for i in range(len(job1)):
+    if job1['a_ind_cd'][i] == '95112':
+        job1['a_ind_cd'][i] = '9512'
+
+for i in range(len(job1)):
+    if job1['a_ind_cd'][i] == '8596':
+        job1['a_ind_cd'][i] = '8569'
+
+
+
+job11 = job1[['a_cmpny_nm','a_maj_act','a_ind_cd']]
+job11
+
+job1['a']=job1['a_cmpny_nm']+' ' +job1['a_maj_act']
+
+
+job11 = job1[['a','a_ind_cd']]
+job11
+
+job2 = pd.read_csv("./jobs2.txt",sep = '\t',header=None,dtype=str)
+job2
+
+job22 = job2[[0,1]]
+job22
+
+
+job111=job11.rename(columns={'a':'job_name','a_ind_cd':'job_code'})
+job111
+
+
+job111.job_code.value_counts().sort_values()
+
+
+
+job222=job22.rename(columns={0:'job_name',1:'job_code'})
+job222
+
+
+job=pd.concat([job111,job222])
+
+job=job.reset_index(drop=True)
+
+job.to_csv('job.csv')
+
+
+job0 = job.loc[0:500001]
+
+
+import hgtk
+
+
+
+job_hgtk0 = []
+for i in range(len(job0)):
+    job_hgtk0.append(hgtk.text.decompose(job0['job_name'][i]))
+
+
+oo0 = []
+for i in range(len(job0)):
+    octopus_remove0 = []
+    for j in range(len(job_hgtk0[i])):
+        if job_hgtk0[i][j] != 'ᴥ': 
+            octopus_remove0.append(job_hgtk0[i][j])
+    oo0.append(octopus_remove0)
+
+
+join0 = []
+for i in range(len(oo0)):
+    join0.append("".join(oo0[i]))
+
+
+def preprocessing(sen):
+    sen = re.sub("[^a-z가-힣ㄱ-ㅎㅏ-ㅣ0-9A-Z\s]+", '★',sen)
+    sen = re.sub("O{2,5}", '■',sen)
+    sen = re.sub("0{2,5}", '■',sen)
+    sen = re.sub("[0-9]+", '▲',sen)
+    sen = re.sub("\s+", '',sen)
+    return sen
+
+
+res0 = []
+for i in range(len(join0)):
+    sen = join0[i]
+    sen = preprocessing(sen)
+    res0.append(sen)
+
+
+res1 = res0 + res00 + res000
+
+
+res1=pd.DataFrame(res1)
+
+res1.to_csv('res1.csv')
+
+
+
+
+
+
