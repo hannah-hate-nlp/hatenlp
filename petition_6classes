@@ -1,0 +1,284 @@
+import pandas as pd
+import numpy as np
+import re
+import nltk
+from konlpy.tag import Twitter
+import itertools
+from collections import Counter
+import pickle
+
+
+petition=pd.read_csv('petiton_df_75530.csv',dtype = str)
+del petition['Unnamed: 0']
+
+agree_list = []
+for i in range(len(petition)):
+    agree = petition['1'][i]
+    sen = re.sub(',','',str(agree))
+    agree_list.append(sen)
+
+for i in range(len(agree_list)):
+    agree_list[i] = int(agree_list[i])
+
+petition['1'] = agree_list
+
+petition = petition.drop([4753,8130,21136,23246,23756,25636,29473,36231,37007,37429,52460,65049,72403,72409,72635],0)
+
+petition=petition.reset_index(drop=True)
+
+petition=petition.rename(columns={'0':'petition','1':'agree'})
+
+agree_class=pd.read_csv('./agree_5.csv',dtype = str, header = None)
+del agree_class[0]
+del agree_class[1]
+
+petition['agree_class'] = agree_class
+
+petition['agree_class'].value_counts()
+
+
+###################
+petition0 = petition[petition['agree_class'] == '0']
+petition00 = petition0.take (np.random.permutation (len (petition0)) [: 1000])
+petition00=petition00.reset_index(drop=True)
+
+petition1 = petition[petition['agree_class'] == '1']
+petition11 = petition1.take (np.random.permutation (len (petition1)) [: 1000])
+petition11=petition11.reset_index(drop=True)
+
+petition2 = petition[petition['agree_class'] == '2']
+petition22 = petition2.take (np.random.permutation (len (petition2)) [: 1000])
+petition22=petition22.reset_index(drop=True)
+
+petition3 = petition[petition['agree_class'] == '3']
+petition33 = petition3.take (np.random.permutation (len (petition3)) [: 1000])
+petition33=petition33.reset_index(drop=True)
+
+petition4 = petition[petition['agree_class'] == '4']
+petition44 = petition4.take (np.random.permutation (len (petition4)) [: 1000])
+petition44=petition44.reset_index(drop=True)
+
+petition55 = petition[petition['agree_class'] == '5']
+# petition55 = pd.concat([petition5,petition5,petition5])
+# petition55=petition55.reset_index(drop=True)
+
+petition = pd.concat([petition00,petition11,petition22,petition33,petition44,petition55],ignore_index=True)
+###############
+
+
+def preprocessing(sen):
+    sen=re.sub("ht+ps\W*\S*", '★',sen)
+    sen = re.sub('[0-9]+','□',sen)
+    sen = re.sub('[^가-힣★□]',' ',sen)
+    sen = re.sub('[\s]+',' ',sen)
+    sen = re.sub('★','URL',sen)
+    sen = re.sub('□','NUM',sen)
+    return sen
+
+
+pre_petition=[]
+for i in range(len(petition)):
+    sen = petition['petition'][i]
+    sen = preprocessing(sen)
+    pre_petition.append(sen)
+
+
+
+import konlpy
+import nltk
+
+
+pos_petition = []
+for i in range(len(pre_petition)):
+    word = konlpy.tag.Twitter().pos(pre_petition[i])
+    grammar = """
+NP: {<N.*>*<Suffix>?}   # Noun phrase
+VP: {<V.*>*}            # Verb phrase
+AP: {<A.*>*}            # Adjective phrase
+"""
+    parser = nltk.RegexpParser(grammar)
+    chunks = parser.parse(word)
+    pos_petition.append(chunks)
+    
+pos_petition = []
+for i in range(len(pre_petition)):
+    pos_petition.append(t.pos(pre_petition[i]))
+
+petition['pos_petition'] = pos_petition
+
+text=list(itertools.chain(*pos_petition))
+
+words_count={}
+for word in text:
+    if word in words_count:
+        words_count[word] += 1
+    else:
+        words_count[word] = 1
+
+sorted_words = sorted([(k,v) for k,v in words_count.items()], key=lambda word_count: -word_count[1])
+
+a = ['[PAD]']
+
+sort_vocab = []
+for i in range(len(sorted_words)):
+    if sorted_words[i][1] > 14 and sorted_words[i][1] < 5832:
+        sort_vocab.append(sorted_words[i][0])
+
+sort_vocab = a + sort_vocab
+
+
+voca = {x: i for i, x in enumerate(sort_vocab)}
+
+voc=[]
+for sentence in petition['pos_petition']:
+    vo=[]
+    for word in sentence:
+        if word in voca:
+            vo.append(voca[word])
+        else:
+            pass
+            
+    voc.append(vo)
+
+pos_crop=[]
+for i in range(len(voc)):
+    pos_crop.append(voc[i][0:200])
+
+petition['pos_crop'] = pos_crop
+
+sequence_length = 200
+
+padded_sentences = []
+for i in range(len(petition)):
+        sentence = petition['pos_crop'][i]
+        num_padding = sequence_length - len(sentence)
+        new_sentence = sentence + [0] * num_padding
+        padded_sentences.append(new_sentence)
+
+
+petition['padding'] = padded_sentences
+
+
+seed = 0
+
+import random
+import numpy as np
+from tensorflow import set_random_seed
+
+random.seed(seed)
+np.random.seed(seed)
+set_random_seed(seed)
+
+from sklearn.cross_validation import train_test_split
+
+from sklearn.cross_validation  import train_test_split
+trainpn, testpn = train_test_split(petition, test_size=0.2, random_state=seed)
+trainpn, valpn = train_test_split(trainpn, test_size=0.2, random_state=seed)
+
+train=trainpn.reset_index(drop=True)
+test=testpn.reset_index(drop=True)
+val=valpn.reset_index(drop=True)
+
+train_p = train['padding']
+test_p = test['padding']
+val_p = val['padding']
+
+train_y = np.array(train['agree_class'])
+test_y = np.array(test['agree_class'])
+val_y = np.array(val['agree_class'])
+
+
+voc_tr = []
+for i in range(len(train_p)):
+    voc_tr.append(train_p[i])
+
+voc_te = []
+for i in range(len(test_p)):
+    voc_te.append(test_p[i])
+
+voc_v = []
+for i in range(len(val_p)):
+    voc_v.append(val_p[i])
+
+X=np.array(pd.DataFrame(voc_tr))
+test_X=np.array(pd.DataFrame(voc_te))
+val_X=np.array(pd.DataFrame(voc_v))
+
+from keras.utils import to_categorical
+train_Y = to_categorical(train['agree_class'].values)
+test_Y = to_categorical(test['agree_class'].values)
+val_Y = to_categorical(val['agree_class'].values)
+
+
+from keras.layers import Input, Dense, Embedding, Flatten
+from keras.layers import SpatialDropout1D
+from keras.layers.convolutional import Conv2D, MaxPooling2D
+from keras.models import Sequential
+
+from keras.layers import Dense,Dropout,Embedding,LSTM,Conv1D,GlobalMaxPooling1D,Flatten,MaxPooling1D,GRU,SpatialDropout1D,Bidirectional
+from keras.optimizers import Adam
+from keras.layers.normalization import BatchNormalization
+from keras.metrics import categorical_accuracy
+from keras import regularizers
+from keras import losses
+from keras import metrics
+
+from sklearn.metrics import r2_score
+import matplotlib.pyplot as plt
+
+max_features = 8398
+maxlen = 200
+
+
+epochs = 15
+batch_size =50
+
+model1_1 = Sequential()
+model1_1.add(Embedding(max_features, 20, input_length=maxlen))
+# model1_1.add(Conv1D(64, kernel_size=3, padding='same', activation='relu'))
+model1_1.add(Conv1D(32, kernel_size=3, padding='same', activation='relu'))
+# model1_1.add(Conv1D(16, kernel_size=3, padding='same', activation='relu'))
+model1_1.add(BatchNormalization())
+model1_1.add(MaxPooling1D(pool_size=2))
+model1_1.add(Flatten())
+model1_1.add(Dense(50, activation='relu',kernel_regularizer=regularizers.l2(0.001)))
+model1_1.add(Dropout(0.5))
+model1_1.add(Dense(6, activation='softmax',kernel_regularizer=regularizers.l2(0.001)))
+model1_1.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
+
+model1_1.fit(X, train_Y, validation_data=(val_X, val_Y),epochs=epochs, batch_size=batch_size, verbose=1)
+
+model1_1.evaluate(test_X, test_Y, verbose=1)
+
+pred_y = model1_1.predict_classes(test_X)
+pred_y
+
+b = []
+for i in pred_y:
+    b.append(str(i))
+
+pred_b = np.array(b)
+
+test_b=np.array(test['agree_class'])
+
+
+from sklearn.datasets import make_classification
+# from sklearn.cross_validation import StratifiedShuffleSplit
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, classification_report, confusion_matrix
+
+accuracy_score(test_b, pred_b)
+f1_score(test_b, pred_b,average='weighted')
+recall_score(test_b, pred_b,average='weighted')
+precision_score(test_b, pred_b,average='weighted')
+
+
+classification_report(test_b, pred_b)
+
+confusion_matrix(test_b, pred_b)
+
+
+
+
+
+
+
