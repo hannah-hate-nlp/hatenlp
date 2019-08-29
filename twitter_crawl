@@ -1,0 +1,58 @@
+import tweepy 
+
+import os        
+
+import sys
+
+
+
+consumer_key = "N3D39OSooX84hx2ScAIZM7LdB"
+
+consumer_secret = "llPvzPt3pz1cGF5MbqpXoRhHwPNHwz9y9L97tArtyREIFRDF1a"
+
+access_token = "164978355-owfCFARerjUnRHPSzyDjzlxXrd3NvoikHy2sUokv"
+
+access_token_secret = "VfxXsbQWaTu908BZzd3hLDVKOgDxv43A6OtEETPl2jsXH"
+
+
+auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
+
+auth.set_access_token(access_token, access_token_secret)
+
+api = tweepy.API(auth)  
+
+
+location = "%s,%s,%s" % ("35.95", "128.25", "1000km")  # 검색기준(대한민국 중심) 좌표, 반지름  
+
+keyword = "trump"                                      # OR 로 검색어 묶어줌, 검색어 5개(반드시 OR 대문자로)                             
+
+wfile = open(os.getcwd()+"/twitter.txt", mode='w')  
+
+
+cursor = tweepy.Cursor(api.search, 
+
+                       q=keyword,
+
+                       since='2019-06-10', # 2015-01-01 이후에 작성된 트윗들로 가져옴
+
+                       count=100,  # 페이지당 반환할 트위터 수 최대 100
+                       
+                       tweet_mode='extended',
+
+                       include_entities=True)
+
+
+
+
+for i, tweet in enumerate(cursor.items()):
+
+    print("{},{},{},{}".format(i, tweet.full_text, tweet.favorite_count,tweet.retweet_count))
+
+    wfile.write(str(tweet.full_text) + '\t' + str(tweet.favorite_count) + '\t' + str(tweet.retweet_count) + '\n')
+
+wfile.close()
+
+
+
+
+
