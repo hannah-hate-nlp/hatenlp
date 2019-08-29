@@ -1,0 +1,230 @@
+pre = model.predict(x_test)
+
+
+for i in range(len(pre)):
+    if pre[i][0] > pre[i][1]:
+        pre[i][0] = 2
+    else: pre[i][0] = 1
+    
+    
+    
+p = []
+for i in range(len(pre)):
+    p.append(pre[i][0])
+
+
+p=np.array(p)
+
+
+
+for i in range(len(test)):
+    if test['Sentiment'][i] == 0:
+        test['Sentiment'][i] = 2
+
+
+y=np.array(test['Sentiment'])
+y
+
+
+accuracy = np.mean(np.equal(y,p))
+
+TP = np.sum(y * p == 1)
+TN = np.sum(y * p == 4)
+
+precision_1 = TP / np.sum(p == 1)
+precision_2 = TN / np.sum(p == 2)
+
+recall_1 = TP / np.sum(y == 1)
+recall_2= TN / np.sum(y == 2)
+
+f1_1 = 2 * precision_1*recall_1/(precision_1+recall_1)
+f1_2 = 2 * precision_2*recall_2/(precision_2+recall_2)
+
+
+print('acc =',accuracy)
+print('prec_1 =',precision_1)
+print('prec_2 =',precision_2)
+print('recall_1 =',recall_1)
+print('recall_2 =',recall_2)
+print('f1_1 =',f1_1)
+print('f1_2 =',f1_2)
+
+
+
+absol = []
+for i in range(len(pre)):
+    absolute=np.abs(pre[i][0] - pre[i][1])
+    absol.append((absolute,i))
+
+absol.sort()
+
+
+end=len(pre)/10
+
+absolute=absol[0:end]
+absolute
+
+
+enhance = []
+for i in range(len(absolute)):
+    j=absolute[i][1]
+    enhance.append(test.loc[j])
+
+
+boundary = pd.DataFrame(enhance)
+boundary=boundary.reset_index(drop=True)
+
+
+for j in range(len(absolute)):
+    h = absolute[j][1]
+    test = test.drop(h,0)
+
+
+#trainpn, testpn = train_test_split(traindatapn, test_size=0.25, random_state=seed)
+#test=testpn.reset_index(drop=True)
+testdata=test.reset_index(drop=True)
+
+
+boundary['Sentiment'].value_counts()
+
+
+threewaydata = pd.concat([testdata,boundary])
+
+
+threewaydata=threewaydata.reset_index(drop=True)
+# threewaydata
+
+
+sequence_length = 290
+
+
+boundarydata = [s.split(" ") for s in boundary['Phrase']]
+
+
+padded_sentences = []
+for i in range(len(boundarydata)):
+        sentence = boundarydata[i]
+        num_padding = sequence_length - len(sentence)
+        new_sentence = sentence + ["<PAD/>"] * num_padding
+        padded_sentences.append(new_sentence)
+
+
+voc=[]
+for sentence in padded_sentences:
+    vo=[]
+    for word in sentence:
+        if word in voca:
+            vo.append(voca[word])
+        else:
+            word = '[UNK]'
+            vo.append(voca[word])
+            
+    voc.append(vo)
+
+bound=np.array(pd.DataFrame(voc))
+bound
+
+
+
+from sklearn import svm
+
+clf = svm.SVC(gamma='scale')
+
+
+y = np.array(train['Sentiment'])
+y = y.astype('int')
+
+
+clf.fit(x_train,y)
+
+bound_p = clf.predict(bound)
+
+
+
+x = [s.split(" ") for s in testdata['Phrase']]
+
+
+padded_sentences= []
+for i in range(len(x)):
+        sentence = x[i]
+        num_padding = sequence_length - len(sentence)
+        new_sentence = sentence + ["<PAD/>"] * num_padding
+        padded_sentences.append(new_sentence)
+        
+
+voc=[]
+for sentence in padded_sentences:
+    vo=[]
+    for word in sentence:
+        if word in voca:
+            vo.append(voca[word])
+        else:
+            word = '[UNK]'
+            vo.append(voca[word])
+            
+    voc.append(vo)
+
+
+X_test=np.array(pd.DataFrame(voc))
+X_test
+
+
+predi = model.predict(X_test)
+predi
+
+for i in range(len(predi)):
+    if predi[i][0] > predi[i][1]:
+        predi[i][0] = 2
+    else: predi[i][0] = 1
+
+
+predic = []
+for i in range(len(predi)):
+    predic.append(pre[i][0])
+
+
+predict = np.array(predic)
+
+predict = predict.astype('int')
+
+for i in range(len(bound_p)):
+    if bound_p[i] == 0:
+        bound_p[i] = 2
+
+dfp=list(predict)
+dfb=list(bound_p)
+
+sum_pred=dfp+dfb
+
+len(sum_pred)
+
+
+sum_p = np.array(sum_pred)
+sum_y = np.array(threewaydata['Sentiment'])
+
+
+
+accuracy = np.mean(np.equal(sum_y,sum_p))
+
+TP = np.sum(sum_y * sum_p == 1)
+TN = np.sum(sum_y * sum_p == 4)
+
+precision_1 = TP / np.sum(sum_p == 1)
+precision_2 = TN / np.sum(sum_p == 2)
+
+recall_1 = TP / np.sum(sum_y == 1)
+recall_2= TN / np.sum(sum_y == 2)
+
+f1_1 = 2 * precision_1*recall_1/(precision_1+recall_1)
+f1_2 = 2 * precision_2*recall_2/(precision_2+recall_2)
+
+
+
+
+print('acc =',accuracy)
+print('prec_1 =',precision_1)
+print('prec_2 =',precision_2)
+print('recall_1 =',recall_1)
+print('recall_2 =',recall_2)
+print('f1_1 =',f1_1)
+print('f1_2 =',f1_2)
