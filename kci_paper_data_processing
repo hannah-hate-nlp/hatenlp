@@ -1,0 +1,427 @@
+import pandas as pd
+import random
+import numpy as np
+from tensorflow import set_random_seed
+import pandas as pd
+import re
+import itertools
+from collections import Counter
+import pickle
+from sklearn.model_selection import train_test_split
+
+seed = 0
+
+import random
+import numpy as np
+from tensorflow import set_random_seed
+
+random.seed(seed)
+np.random.seed(seed)
+set_random_seed(seed)
+
+
+from wordcloud import WordCloud, STOPWORDS
+stopwords = set(STOPWORDS)
+stopwords.remove("not")
+
+def preprocessing(sen):
+    sen = re.sub("RT ", ' ',sen)
+    sen = sen.lower()
+    sen = re.sub("ht+p\W*\S*", ' urlu ',sen)
+    sen = re.sub("\d+", ' numu ',sen)
+    sen = re.sub("@\w+", ' nameu ',sen)
+    sen = re.sub("\t", ' ',sen)
+    sen = re.sub("can't", 'can not',sen)
+    sen = re.sub("n't", ' not',sen)
+    sen = re.sub("'m", ' am',sen)
+    sen = re.sub("'s", ' is',sen)
+    sen = re.sub("'re", ' are',sen)
+    sen = re.sub("'ve", ' have',sen)
+    sen = re.sub("'d", ' would',sen)
+    sen = re.sub("[^a-z\s]+", ' speu ',sen)
+    sen = re.sub("\s\s+", ' ',sen)
+    sen = re.sub("urlu", '[URL]',sen)
+    sen = re.sub("numu", '[NUM]',sen)
+    sen = re.sub("nameu", '[NAME]',sen)
+    sen = re.sub("speu", '[SPE]',sen)
+
+    return sen
+
+def remove_stopwords(words):    
+    ret = []
+    for word in words:
+        if word not in stopwords:
+            ret.append(word)
+        
+    return  ret
+
+tweet = pd.read_csv('./twitter_buds.txt',error_bad_lines=False, sep = '\t', header = None)
+tweet=tweet.dropna(axis = 0)
+tweet = tweet.drop_duplicates([0])
+tweet = tweet.reset_index(drop=True)
+
+tweet.to_csv('tweet_buds.csv',encoding='utf-8')
+
+
+traindata = tweet.rename(columns={0:'tweet',1:'like',2:'retweet',3:'time'})
+
+traindata3=[]
+for i in range(len(traindata)):
+    sen = traindata['tweet'][i]
+    sen = preprocessing(sen)
+    words = sen.split()
+    words = remove_stopwords(words)
+    traindata3.append(words)
+
+traindata['tweet'] = traindata3
+
+traindata_join = []
+for i in range(len(traindata)):
+     traindata_join.append(" ".join(traindata['tweet'][i]))
+        
+traindata["tweet"] = traindata_join
+
+
+word_count = []
+count=0
+for i in range(len(traindata)): 
+    count=0
+    count += len(traindata['tweet'][i].split(" "))
+    word_count.append(count)
+np.max(word_count)
+
+
+np.mean(traindata['like'])
+np.mean(traindata['retweet'])
+sentences=traindata["tweet"]
+
+
+sentences = [s.strip() for s in sentences]
+x_text = [s.split(" ") for s in sentences]
+
+
+sequence_length = 73
+
+
+padded_sentences = []
+for i in range(len(x_text)):
+    sentence = x_text[i]
+    num_padding = sequence_length - len(sentence)
+    new_sentence = sentence + ["<PAD/>"] * num_padding
+    padded_sentences.append(new_sentence)
+
+
+text=list(itertools.chain(*padded_sentences))
+text
+
+words_count={}
+for word in text:
+    if word in words_count:
+        words_count[word] += 1
+    else:
+        words_count[word] = 1
+
+sorted_words = sorted([(k,v) for k,v in words_count.items()], key=lambda word_count: -word_count[1])
+
+sort_vocab = []
+for i in range(len(sorted_words)):
+    if sorted_words[i][1] > 0:
+        sort_vocab.append(sorted_words[i][0])
+
+sort_vocab.append('[UNK]')
+
+
+
+vocabulary = {x: i for i, x in enumerate(sort_vocab)}
+
+
+import pickle
+
+file=open("./voca","rb")
+
+voca=pickle.load(file)
+
+
+len(list(voca.keys()))
+
+vocab = []
+
+
+vocab = list(set(list(voca.keys())+sort_vocab))
+
+
+
+vocab_full = {x: i for i, x in enumerate(vocab)}
+vocab_full
+
+
+
+with open('vocab_full', 'wb') as f:
+    pickle.dump(vocab_full, f)
+
+
+
+x = [s.split(" ") for s in traindata['tweet']]
+x
+
+sequence_length = 73
+
+padded_sentences = []
+for i in range(len(x)):
+        sentence = x[i]
+        num_padding = sequence_length - len(sentence)
+        new_sentence = sentence + ["<PAD/>"] * num_padding
+        padded_sentences.append(new_sentence)
+
+voc=[]
+for sentence in padded_sentences:
+    vo=[]
+    for word in sentence:
+        if word in vocab_full:
+            vo.append(vocab_full[word])
+        else:
+            word = '[UNK]'
+            vo.append(vocab_full[word])
+            
+    voc.append(vo)
+
+from keras.utils import to_categorical
+
+
+X=np.array(pd.DataFrame(voc))
+X
+
+np.save("./tweet_X",X)
+
+
+
+
+
+
+================================
+
+
+pred_y = list(np.load('./pred_Y.npy'))
+
+pd.DataFrame(pred_y).to_csv('yy.csv')
+
+traindata['sentiment'] = pred_y
+
+
+
+from sklearn import preprocessing
+
+normal = preprocessing.normalize(train, norm='l2')
+norm = pd.DataFrame(normal)
+
+leng = []
+for i in range(len(traindata)):
+    leng.append(len(traindata['tweet'][i]))
+traindata['leng'] = leng
+
+word = []
+for i in range(len(traindata)):
+    a = traindata['tweet'][i].split()
+    word.append(len(a))
+traindata['word'] = word
+
+traindata['tweet'][0].count("[SPE]")
+
+spe = []
+for i in range(len(traindata)):
+    spe.append(traindata['tweet'][i].count("[SPE]"))
+traindata['spe'] = spe
+
+train = traindata
+train
+
+
+
+del train['tweet']
+del train['sentiment']
+
+
+nor_corr = norm.corr()
+
+nor_corr.columns = ["like","retweet",'length','word','special']
+
+nor_corr = nor_corr.rename(index = {0:"like",1:"retweet",2:'length',3:'word',4:'special'})
+
+
+%matplotlib inline   #쥬피터노트북에서 이미지 표시가능하게 하는 쥬피터노트북 매직함수
+import matplotlib.pyplot as plt 
+import seaborn as sns 
+
+
+pos_tweet = traindata[traindata.sentiment == 1]
+pos_tweet = pos_tweet.reset_index(drop=True)
+pos_tweet
+
+neg_tweet = traindata[traindata.sentiment == 0]
+neg_tweet = neg_tweet.reset_index(drop=True)
+neg_tweet
+
+import matplotlib.pyplot as plt
+%matplotlib inline
+
+from wordcloud import WordCloud
+
+
+
+stopwords.add('tiene')
+stopwords.add('petit')
+stopwords.add('oreille')
+stopwords.add('aid')
+# stopwords.add('barato')
+stopwords.add('gigante')
+stopwords.add('continue')
+stopwords.add('wire')
+stopwords.add('job')
+stopwords.add('cardinal')
+stopwords.add('chorros')
+stopwords.add('kinda')
+stopwords.add('Schulklasse')
+stopwords.add('outcome')
+stopwords.add('andrew')
+stopwords.add('already')
+stopwords.add('smartphone')
+stopwords.add('selfie')
+stopwords.add('topsound')
+stopwords.add('star')
+stopwords.add('mucha')
+
+
+
+sentences = list(pos_tweet['tweet'])
+sentences = [s.strip() for s in sentences]
+# x_text = [" ".join(sentence)]
+# x_text = list(itertools.chain(*x_text))
+
+
+sen_after_p = []
+for i in range(len(sentences)):
+    sen = sentences[i]
+    words = sen.split()
+    words = remove_stopwords(words)
+    sen_after_p.append(words)
+
+sen_after_p = list(itertools.chain(*sen_after_p))
+
+ddd=" ".join(sen_after_p)
+
+sentences = list(neg_tweet['tweet'])
+sentences = [s.strip() for s in sentences]
+# x_text = [" ".join(sentence)]
+# x_text = list(itertools.chain(*x_text))
+
+
+sen_after_n = []
+for i in range(len(sentences)):
+    sen = sentences[i]
+    words = sen.split()
+    words = remove_stopwords(words)
+    sen_after_n.append(words)
+    
+    
+sen_after_n = list(itertools.chain(*sen_after_n))
+
+eee=" ".join(sen_after_n)
+
+ddd=list(set(sen_after_p) - set(sen_after_n))
+ddd=" ".join(ddd)
+
+eee=list(set(sen_after_n) - set(sen_after_p))
+eee=" ".join(eee)
+
+wordcloud = WordCloud().generate(ddd)
+plt.imshow(wordcloud)
+plt.show
+
+wordcloud = WordCloud().generate(eee)
+plt.imshow(wordcloud)
+plt.show
+
+list(pos_tweet['like'].value_counts()).sort()
+p=list(pos_tweet['like'].value_counts())
+p=pd.DataFrame(p)
+np.mean(p)
+np.std(p)
+
+
+
+list(pos_tweet['retweet'].value_counts()).sort()
+pr=list(pos_tweet['retweet'].value_counts())
+pr=pd.DataFrame(pr)
+np.mean(pr)
+np.std(pr)
+
+list(neg_tweet['like'].value_counts()).sort()
+n=list(neg_tweet['like'].value_counts())
+n=pd.DataFrame(n)
+np.mean(n)
+np.std(n)
+
+list(neg_tweet['retweet'].value_counts()).sort()
+nr=list(neg_tweet['retweet'].value_counts())
+nr=pd.DataFrame(nr)
+np.mean(nr)
+np.std(nr)
+
+
+a = traindata[traindata.retweet > 0]
+np.mean(a['retweet'])
+
+
+from scipy import stats
+
+# tTestResult = stats.ttest_ind(pos_tweet['like'], neg_tweet['like'])
+
+tTestResultDiffVar = stats.ttest_ind(pos_tweet['like'], neg_tweet['like'], equal_var=False)
+
+tTestResultDiffVar
+
+
+how = np.array(pos_tweet['sentiment'])
+hown = np.array(neg_tweet['sentiment'])
+
+what = []
+for i in range(len(pos_tweet)):
+    
+    a = [pos_tweet['like'][i],pos_tweet['retweet'][i]]
+    what.append(a)
+    
+whatn = []
+for i in range(len(neg_tweet)):
+    
+    a = [neg_tweet['like'][i],neg_tweet['retweet'][i]]
+    whatn.append(a)
+
+what = np.array(what)
+whatn = np.array(whatn)
+
+
+import matplotlib.pyplot as plt
+import pandas as pd
+from sklearn.datasets import load_iris
+
+X, y = what, how
+
+iris_df = pd.DataFrame(X, columns=['like','retweet'])
+print(iris_df.describe())
+iris_df.boxplot()
+iris_df.plot()
+plt.show()
+
+
+
+import matplotlib.pyplot as plt
+import pandas as pd
+from sklearn.datasets import load_iris
+
+X, y = whatn, hown
+
+iris_df = pd.DataFrame(X, columns=['like','retweet'])
+print(iris_df.describe())
+iris_df.boxplot()
+iris_df.plot()
+plt.show()
