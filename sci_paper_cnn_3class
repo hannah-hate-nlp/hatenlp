@@ -1,0 +1,56 @@
+model1_1 = Sequential()
+model1_1.add(Embedding(max_features, 50, input_length=maxlen))
+model1_1.add(Conv1D(16, kernel_size=3, padding='same', activation='relu'))
+model1_1.add(BatchNormalization())
+model1_1.add(Conv1D(8, kernel_size=3, padding='same', activation='relu'))
+model1_1.add(MaxPooling1D(pool_size=2))
+model1_1.add(Flatten())
+model1_1.add(Dense(3, activation='relu',kernel_regularizer=regularizers.l2(0.001)))
+model1_1.add(Dropout(0.5))
+model1_1.add(Dense(3, activation='softmax',kernel_regularizer=regularizers.l2(0.001)))
+model1_1.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+model1_1.fit(X, Y, validation_data=(val_X, val_Y),epochs=epochs, batch_size=batch_size, verbose=1)
+
+model1_1.evaluate(test_X, test_Y, verbose=1,batch_size=32)
+
+
+
+
+from sklearn.datasets import make_classification
+# from sklearn.cross_validation import StratifiedShuffleSplit
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, classification_report, confusion_matrix
+
+test_y=np.array(test['Sentiment'])
+
+a = []
+for i in test_y:
+    a.append(int(i))
+
+test_b = np.array(a)
+
+pred_y = model1_1.predict_classes(test_X)
+
+
+b = []
+for i in pred_y:
+    b.append(int(i))
+
+pred_b = np.array(b)
+
+accuracy_score(test_b, pred_b)
+
+f1_score(test_b, pred_b,average='weighted')
+
+recall_score(test_b, pred_b,average='weighted')
+
+precision_score(test_b, pred_b,average='weighted')
+
+
+
+
+
+
+
+
+
