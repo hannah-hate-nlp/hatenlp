@@ -1,0 +1,116 @@
+https://search.naver.com/search.naver?&where=news&query=%EC%95%84&sm=tab_pge&sort=0&photo=0&field=0&reporter_article=&pd=3&ds=2007.01.01&de=2007.12.31&docid=&nso=so:r,p:from20070101to20071231,a:all&mynews=0&cluster_rank=10&start=11&refresh_start=0
+
+with open('out2017.txt','w') as f:
+    f.write('\n'.join(comments_list))
+리스트 저장
+======================
+import random
+
+# 중복 허용
+count = 2
+sampleList = ['a', 'b', 'c', 'd', 'e']
+print [random.choice(sampleList) for i in range(count)]
+
+# 중복 허용 X 
+print random.sample(sampleList, count)
+=======================
+
+
+@QWrwhFkE9Oq8qTb
+
+트위터 아이디
+
+hannah 계정이름
+
+
+
+
+
+
+tweepy status object public properties and methods
+    # note - excludes __ and _ items
+    ['author',
+    'contributors',
+    'coordinates',
+    'created_at',
+    'destroy',
+    'entities',
+    'favorite',
+    'favorite_count',
+    'favorited',
+    'geo',
+    'id',
+    'id_str',
+    'in_reply_to_screen_name',
+    'in_reply_to_status_id',
+    'in_reply_to_status_id_str',
+    'in_reply_to_user_id',
+    'in_reply_to_user_id_str',
+    'is_quote_status',
+    'lang',
+    'parse',
+    'parse_list',
+    'place',
+    'retweet',
+    'retweet_count',
+    'retweeted',
+    'retweets',
+    'source',
+    'source_url',
+    'text',
+    'truncated',
+    'user']
+    """
+    
+    
+    
+    
+    
+    
+    
+    N3D39OSooX84hx2ScAIZM7LdB (API key)
+
+llPvzPt3pz1cGF5MbqpXoRhHwPNHwz9y9L97tArtyREIFRDF1a (API secret key)
+
+164978355-owfCFARerjUnRHPSzyDjzlxXrd3NvoikHy2sUokv (Access token)
+
+VfxXsbQWaTu908BZzd3hLDVKOgDxv43A6OtEETPl2jsXH (Access token secret)
+
+Read and write (Access level)
+
+gkaak41@naver.com
+
+
+
+python -m pip install <name>
+
+
+<h3>Youtube API 공통 코드</h3>
+
+df = df.take (np.random.permutation (len (df)) [: n])
+
+
+petition[petition.agree <= 200000]
+
+error_bad_lines=False
+
+
+
+encoding='CP949'
+
+
+
+
+
+클라이언트 id:
+10771518689-v8nf1avbvarjqfdpd5kctr35c687mf1f.apps.googleusercontent.com
+
+
+클라이언트 보안비밀:IUItQsh5N6I8lCU4kUpok6wb
+
+연구자등록번호
+11769736
+
+
+
+
